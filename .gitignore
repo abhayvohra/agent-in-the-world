@@ -1,0 +1,8 @@
+# created when you play — not part of the game itself
+world/
+agent-memory.txt
+journal-human.txt
+.DS_Store
+
+# local machine/user settings — not meant to be shared
+.claude/settings.local.json
