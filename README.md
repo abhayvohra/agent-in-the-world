@@ -89,4 +89,4 @@ The two scripts are meant to be read. `cat agent.sh` shows the agent: its body (
 
 ## License
 
-*(to be decided)*
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en) — Attribution-NonCommercial-ShareAlike 4.0 International. Share and adapt freely, with credit to InterEmbodied Labs, for non-commercial purposes, under the same license. See [LICENSE](LICENSE) for details.
