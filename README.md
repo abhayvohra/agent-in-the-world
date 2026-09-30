@@ -1,7 +1,7 @@
 # Agent in the World
 
 *A small game for learning the command line, played by you and then by an agent.*
-Module 1 of **Agentic**, a course by InterEmbodied Labs.
+Module 1 of **Agentic Intelligence**, a course by InterEmbodied Labs.
 
 An agent wakes up in a world made of folders. One room is the destination. Every room has a `clue.txt` with a single number: how many moves away the destination is. The destination's clue reads **0**.
 
