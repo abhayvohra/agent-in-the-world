@@ -146,7 +146,7 @@ play_manual() {
     if [ -r map.txt ]; then
       cat map.txt; MAPS=$(( MAPS + 1 )); log "cat map.txt (look $MAPS)"
       echo
-      read -r -p "${D}Study the map. Press Enter to put it away — you'll have to remember it.${N} " _
+      read -r -p "${D}Study the map. Press Enter to put it away — you'll have to remember it. Type map to bring it back.${N} " _
       printf '\033[2J\033[3J\033[H'          # clear the screen AND the scroll-back
       echo "${D}The map is gone. What do you remember?${N}"
     else echo "${RD}cat: map.txt: no such file here${N} ${D}(the map is in the first room)${N}"; log "cat map.txt -> not here"; fi
@@ -156,7 +156,8 @@ play_manual() {
   cat <<EOF
 
   You wake up in a world made of folders. Somewhere there is a room whose clue reads 0.
-  Every room has a clue.txt: the number of moves between that room and the destination.
+  Every room has a clue (a file called clue.txt). Type clue to read it: the number of moves
+  between that room and the destination.
   ${D}Your tools: whoami  pwd  ls  ls -a  cd <room>  cd ..  clue  map  cat <file>  help  exit${N}
   ${D}There is a map in this first room. Read it well — once you look away, it's gone.${N}
 
