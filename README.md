@@ -6,7 +6,7 @@ Module 1 of **Agentic Intelligence**, a course by InterEmbodied Labs.
 An agent wakes up in a world made of folders. One room is the destination. Every room has a `clue.txt` with a single number: how many moves away the destination is. The destination's clue reads **0**.
 
 ```
-[moves:2] agent@world/grotto/harbour $ cat clue.txt
+[moves:2] agent@world/grotto/harbour $ clue
 1
 ```
 
@@ -51,9 +51,11 @@ The first game builds a world. Later games reuse the **same world**, so you can 
 | `ls`, `ls -a` | shows what is in this room (`-a` also shows hidden things) |
 | `cd <room>` | steps into a room inside this one |
 | `cd ..` | steps back out |
-| `cat <file>` | reads a file in this room |
+| `clue` | reads this room's clue (same as `cat clue.txt`) |
+| `map` | shows the map, in the first room (same as `cat map.txt`) |
+| `cat <file>` | reads any file in this room |
 
-The world's rules: one step at a time, no flying (no `/` in names), and your senses reach only the room you are in. The **map** (`cat map.txt` in the first room) disappears when you press Enter, so you have to remember it.
+The world's rules: one step at a time, no flying (no `/` in names), and your senses reach only the room you are in. The **map** (type `map` in the first room) disappears when you press Enter, so you have to remember it. Type `map` again to bring it back.
 
 ## Options
 
