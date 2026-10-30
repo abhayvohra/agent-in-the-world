@@ -157,7 +157,7 @@ play_manual() {
 
   You wake up in a world made of folders. Somewhere there is a room whose clue reads 0.
   Every room has a clue.txt: the number of moves between that room and the destination.
-  ${D}Your tools: whoami  pwd  ls  ls -a  cd <room>  cd ..  cat <file>  help  exit${N}
+  ${D}Your tools: whoami  pwd  ls  ls -a  cd <room>  cd ..  clue  map  cat <file>  help  exit${N}
   ${D}There is a map in this first room. Read it well — once you look away, it's gone.${N}
 
 EOF
@@ -170,6 +170,8 @@ EOF
     [ -z "$LINE" ] && continue
     history -s "$LINE" 2>/dev/null
     set -- $LINE; cmd="$1"; shift; arg="${1:-}"
+    # shortcuts: "clue" is "cat clue.txt", "map" is "cat map.txt"
+    case "$cmd" in clue) cmd=cat; arg=clue.txt ;; map) cmd=cat; arg=map.txt ;; esac
 
     case "$cmd" in
       whoami) whoami; log "whoami" ;;
@@ -220,7 +222,9 @@ EOF
         echo "  ls  / ls -a   what is in this room? (-a also shows hidden things)"
         echo "  cd <room>     step into a room inside this one"
         echo "  cd ..         step back out to the room that contains this one"
-        echo "  cat <file>    read a file in this room (try: cat clue.txt)"
+        echo "  clue          read this room's clue (same as: cat clue.txt)"
+        echo "  map           look at the map, if it is in this room (same as: cat map.txt)"
+        echo "  cat <file>    read any file in this room"
         echo "  exit          give up" ;;
       exit|quit) echo "Agent stopped after $MOVES moves."; log "GAVE UP moves=$MOVES"; return 0 ;;
       *) deny "'$cmd' is not a tool this agent has. Type help to see your tools." ;;
