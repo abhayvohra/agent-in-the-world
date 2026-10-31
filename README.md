@@ -3,7 +3,7 @@
 *A small game for learning the command line, played by you and then by an agent.*
 Module 1 of **Agentic Intelligence**, a course by InterEmbodied Labs.
 
-An agent wakes up in a world made of folders. One room is the destination. Every room has a `clue.txt` with a single number: how many moves away the destination is. The destination's clue reads **0**.
+An agent wakes up in a world made of folders. One room is the destination. Every room has a `clue.txt` with a single number: how many moves away the destination is. The destination's clue reads **0**. In manual mode a haiku also points the way, and the destination is named in it. You only get to read the haiku once.
 
 ```
 [moves:2] agent@world/grotto/harbour $ clue
@@ -40,7 +40,7 @@ bash agent.sh --auto       # watch an agent that follows the clues on its own
 bash agent.sh --random     # watch an agent that wanders at random
 ```
 
-The first game builds a world. Later games reuse the **same world**, so you can compare how you, the auto agent and the random agent do on it.
+The first game builds a world, and the world comes with its own haiku. Later games reuse the **same world**, so you can compare how you, the auto agent and the random agent do on it. Add `--new` for a fresh world with a new haiku.
 
 ### In manual mode you have these tools
 
@@ -52,10 +52,9 @@ The first game builds a world. Later games reuse the **same world**, so you can 
 | `cd <room>` | steps into a room inside this one |
 | `cd ..` | steps back out |
 | `clue` | reads this room's clue (same as `cat clue.txt`) |
-| `map` | shows the map, in the first room (same as `cat map.txt`) |
 | `cat <file>` | reads any file in this room |
 
-The world's rules: one step at a time, no flying (no `/` in names), and your senses reach only the room you are in. The **map** (type `map` in the first room) disappears when you press Enter, so you have to remember it. Type `map` again to bring it back.
+The world's rules: one step at a time, no flying (no `/` in names), and your senses reach only the room you are in. At the start a **haiku** appears. Read it well: when you press Enter it is wiped from the screen and does not come back. Some rooms are named after its words, and they lead to the destination. Is there anything else in the first room that can help you? Look around.
 
 ## Options
 
@@ -79,7 +78,7 @@ bash agent.sh --auto
 
 | Path | What it is |
 |---|---|
-| `world/` | the world: folders (rooms), `clue.txt` files and `map.txt` |
+| `world/` | the world: folders (rooms) and `clue.txt` files, plus a few things to discover |
 | `agent-memory.txt` | what the agent saw, tried and did, one line per event |
 | `journal-human.txt` | every command you typed in manual mode |
 

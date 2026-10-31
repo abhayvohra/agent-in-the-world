@@ -34,11 +34,12 @@ HOME_DIR="$(cd "$(dirname "$0")" && pwd)"        # the folder this script lives 
 WORLD="$HOME_DIR/world"
 MEMORY="$HOME_DIR/agent-memory.txt"
 JOURNAL="$HOME_DIR/journal-human.txt"
+HAIKUS="$HOME_DIR/.haiku.md"        # hidden file: plain ls will not show it
 AGENT_SENSES="${AGENT_SENSES:-clue.txt}"
 AGENT_MAX_STEPS="${AGENT_MAX_STEPS:-60}"
 AGENT_DELAY="${AGENT_DELAY:-0.6}"
 
-MODE="manual"; NEW="no"; BUILD_ARGS=""
+MODE="manual"; NEW="no"; BUILD_ARGS=""; SEED_ARG=""
 usage() { awk 'NR>2 && /^# =+$/ {exit} NR>2 {sub(/^# ?/, ""); print}' "$0"; }
 
 while [ $# -gt 0 ]; do
@@ -49,6 +50,7 @@ while [ $# -gt 0 ]; do
     --new)    NEW="yes"; shift ;;
     --seed|--level|--depth|--branching)
               [ -z "${2:-}" ] && { echo "$1 needs a value"; exit 1; }
+              [ "$1" = "--seed" ] && SEED_ARG="$2"
               BUILD_ARGS="$BUILD_ARGS $1 $2"; NEW="yes"; shift 2 ;;
     --fast)   AGENT_DELAY=0; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -70,13 +72,22 @@ banner() {
   echo "███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   ██║██║     "
   echo "██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   ██║██║     "
   echo "██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   ██║╚██████╗"
-  echo "╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝ ╚═════╝${N}"
+  echo "╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝ ╚═════╝"
+  echo "${B}I    N    T    E    L    L    I    G    E    N    C    E${N}"
   echo
   echo "${O}╭${line}╮${N}"
   printf "${O}│${N} ${O}✻${N} ${B}%-50s${N} ${O}│${N}\n" "Welcome to Agent in the World"
   printf "${O}│${N}   %-50s ${O}│${N}\n" ""
   printf "${O}│${N}   ${D}%-50s${N} ${O}│${N}\n" "$1"
   printf "${O}│${N}   ${D}%-50s${N} ${O}│${N}\n" "$2"
+  printf "${O}│${N}   %-50s ${O}│${N}\n" ""
+  printf "${O}│${N}   ${D}%-50s${N} ${O}│${N}\n" "How to start:  bash agent.sh <option>"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "(none)"   "you are the brain (default)"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "--auto"   "watch an agent follow the clues"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "--random" "watch an agent wander"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "--new"    "build a fresh world"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "--clean"  "delete the world and all records"
+  printf "${O}│${N}   ${B}%-10s${N} ${D}%-39s${N} ${O}│${N}\n" "--help"   "every option"
   echo "${O}╰${line}╯${N}"
   echo
 }
@@ -110,7 +121,7 @@ if [ "$MODE" = "clean" ]; then
 fi
 
 case "$MODE" in
-  manual) banner "mode:  manual - you are the agent's brain" "tools: type help  |  options: bash agent.sh --help" ;;
+  manual) banner "mode:  manual - you are the agent's brain" "tools: type help once the game starts" ;;
   auto)   banner "mode:  auto - the agent follows the clues" "sit back and watch  |  Ctrl-C to stop" ;;
   random) banner "mode:  random - the agent wanders" "sit back and watch  |  Ctrl-C to stop" ;;
 esac
@@ -118,17 +129,43 @@ esac
 # =============================================================================
 #  THE WORLD — reuse the current one, or ask world-builder.sh for a new one
 # =============================================================================
+# .haiku.md holds the haikus. Each is three lines plus a "trail:" line (the rooms on the
+# way to the destination). haiku_field 3 text  /  haiku_field 3 trail  reads haiku number 3.
+haiku_field() {
+  awk -v n="$1" -v want="$2" '
+    function flush(   i, has) {
+      has = 0; for (i = 1; i <= k; i++) if (buf[i] ~ /^trail:/) has = 1
+      if (has && ++c == n) for (i = 1; i <= k; i++) {
+        if (buf[i] ~ /^trail:/) { if (want == "trail") { sub(/^trail:[ ]*/, "", buf[i]); print buf[i] } }
+        else if (want == "text") print buf[i]
+      }
+      k = 0
+    }
+    /^[ \t]*$/ { flush(); next }
+    { buf[++k] = $0 }
+    END { flush() }' "$HAIKUS" 2>/dev/null
+}
+
 if [ "$NEW" = "yes" ] || [ ! -f "$WORLD/.world" ]; then
-  WORLD="$WORLD" bash "$HOME_DIR/world-builder.sh" $BUILD_ARGS || exit 1
+  # Pick a haiku for the new world: the seed decides if you gave one, otherwise chance.
+  HAIKU_COUNT=$(grep -c '^trail:' "$HAIKUS" 2>/dev/null)
+  if [ "${HAIKU_COUNT:-0}" -gt 0 ]; then
+    PICK=$(( ${SEED_ARG:-$RANDOM} % HAIKU_COUNT + 1 ))
+    WORLD="$WORLD" bash "$HOME_DIR/world-builder.sh" $BUILD_ARGS --trail "$(haiku_field "$PICK" trail)" || exit 1
+    echo "haiku=$PICK" >> "$WORLD/.world"          # the world remembers WHICH haiku, not its words
+  else
+    WORLD="$WORLD" bash "$HOME_DIR/world-builder.sh" $BUILD_ARGS || exit 1
+  fi
   : > "$MEMORY"
 else
-  echo "${D}Using the existing world ($(sed 's/built by world-builder.sh *//' "$WORLD/.world")). Add --new for a fresh one.${N}"
+  echo "${D}Using the existing world ($(head -1 "$WORLD/.world" | sed 's/built by world-builder.sh *//')). Add --new for a fresh one.${N}"
 fi
 
 cd "$WORLD" || exit 1
 ROOT="$(pwd)"
 OPTIMAL="$(tr -d ' \r\n' < "$ROOT/clue.txt")"
 MOVES=0
+HAIKU=$(sed -n 's/^haiku=//p' "$ROOT/.world")     # which haiku this world was built for
 
 here()  { local p="${PWD#$ROOT}"; echo "world${p}"; }
 trap 'echo; echo "${Y}Stopped.${N} The world is still there — play again, or start over with:  bash agent.sh --clean"; exit 130' INT
@@ -142,6 +179,18 @@ play_manual() {
   set -o history 2>/dev/null    # up-arrow recalls earlier commands
   log()  { echo "$(date '+%H:%M:%S')  $*" >> "$JOURNAL"; }
   deny() { echo "${Y}✗ $*${N}"; log "DENIED  $LINE"; }
+  # The haiku is shown once, then wiped. Its words are the last rooms on the way to the
+  # destination. The world remembers only WHICH haiku it has (haiku=N in .world); the
+  # words stay in .haiku.md and are never copied to the journal.
+  show_haiku() {
+    echo
+    haiku_field "$HAIKU" text | sed 's/^/      /'
+    echo
+    read -r -p "${D}Read it well. Press Enter and it is gone for good.${N} " _
+    printf '\033[2J\033[3J\033[H'          # clear the screen AND the scroll-back
+    echo "${D}The haiku has faded. What do you remember?${N}"
+    log "haiku shown"
+  }
   show_map() {
     if [ -r map.txt ]; then
       cat map.txt; MAPS=$(( MAPS + 1 )); log "cat map.txt (look $MAPS)"
@@ -155,15 +204,18 @@ play_manual() {
   echo "--- new game $(date)" >> "$JOURNAL"
   cat <<EOF
 
-  You wake up in a world made of folders. Somewhere there is a room whose clue reads 0.
+  You wake up lost in a world made of folders. Somewhere there is a room whose clue reads 0.
   Every room has a clue (a file called clue.txt). Type clue to read it: the number of moves
   between that room and the destination.
-  ${D}Your tools: whoami  pwd  ls  ls -a  cd <room>  cd ..  clue  map  cat <file>  help  exit${N}
-  ${D}There is a map in this first room. Read it well — once you look away, it's gone.${N}
-
+  ${D}Your tools: whoami  pwd  ls  ls -a  cd <room>  cd ..  clue  cat <file>  help  exit${N}
 EOF
-  read -r -p "${D}Press Enter to see the map.${N} " _
-  show_map
+  # No haiku for this world (a world built before haiku mode, or .haiku.md is missing): just play.
+  if [ -n "$(haiku_field "${HAIKU:-0}" text)" ]; then
+    echo "  ${B}${O}A haiku comes to you. It points the way out. Read it well — once, and it is gone for good.${N}"
+    echo
+    read -r -p "${D}Press Enter to see the haiku.${N} " _
+    show_haiku
+  fi
 
   while :; do
     TURNS=$(( TURNS + 1 ))
@@ -192,7 +244,7 @@ EOF
                 if [ "$(tr -d ' \r\n' < "$arg")" = "0" ]; then
                   echo
                   echo "${G}✓ The clue reads 0. You have arrived: $(here)${N}"
-                  echo "  Moves: $MOVES  ·  Shortest possible: $OPTIMAL  ·  Commands typed: $TURNS  ·  Looks at the map: $MAPS"
+                  echo "  Moves: $MOVES  ·  Shortest possible: $OPTIMAL  ·  Commands typed: $TURNS$([ "$MAPS" -gt 0 ] && echo "  ·  Looks at the map: $MAPS")"
                   echo "  ${D}Your journey is in journal-human.txt · Start over: bash agent.sh --clean${N}"
                   log "ARRIVED at $(here) moves=$MOVES optimal=$OPTIMAL maps=$MAPS"
                   return 0
@@ -224,7 +276,6 @@ EOF
         echo "  cd <room>     step into a room inside this one"
         echo "  cd ..         step back out to the room that contains this one"
         echo "  clue          read this room's clue (same as: cat clue.txt)"
-        echo "  map           look at the map, if it is in this room (same as: cat map.txt)"
         echo "  cat <file>    read any file in this room"
         echo "  exit          give up" ;;
       exit|quit) echo "Agent stopped after $MOVES moves."; log "GAVE UP moves=$MOVES"; return 0 ;;

@@ -6,6 +6,11 @@
 #  with ONE number — how many moves (cd one step up or down) separate that
 #  room from the destination. The destination's clue reads 0.
 #
+#  The last rooms on the way to the destination can be named after a haiku
+#  (--trail "dream hopes egress" builds .../dream/hopes/egress). agent.sh picks
+#  the haiku from .haiku.md and passes its trail here. The last word of the trail
+#  is the destination.
+#
 #  You normally don't run this yourself: agent.sh calls it when it needs a
 #  world. It is a separate file because the world and the agent are made by
 #  different hands — read it to see how the environment was designed.
@@ -16,6 +21,7 @@
 #     bash world-builder.sh --level 2       # some clues are hidden (.clue.txt)
 #     bash world-builder.sh --level 3       # ...and some dead-end rooms are locked
 #     bash world-builder.sh --depth 5 --branching 3
+#     bash world-builder.sh --trail "dream hopes egress"   # the rooms to the destination
 #
 #  Environment variables it respects:
 #     WORLD   where to build the world (default: ./world)
@@ -31,6 +37,7 @@ SEED=""
 LEVEL=1
 DEPTH=4
 BRANCHING=3
+TRAIL_IN="dream hopes egress"   # the rooms on the way, outermost first; the last is the destination
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -38,6 +45,7 @@ while [ $# -gt 0 ]; do
     --level)     LEVEL="$2"; shift 2 ;;
     --depth)     DEPTH="$2"; shift 2 ;;
     --branching) BRANCHING="$2"; shift 2 ;;
+    --trail)     TRAIL_IN="$2"; shift 2 ;;
     -h|--help)   awk 'NR>2 && /^# =+$/ {exit} NR>2 {print}' "$0"; exit 0 ;;
     *) echo "Unknown option: $1  (try --help)"; exit 1 ;;
   esac
@@ -80,7 +88,9 @@ courtyard delta dune estuary fern forge garden glacier grotto harbour hive
 kiln ladder lantern library loom marsh meadow mill moss nest oasis orchard
 quarry reef river sanctum spring stair steppe stupa terrace tunnel vault well"
 set -- $NAMES; NAME_COUNT=$#
-USED=" "         # every room gets a name no other room has, so maps are readable
+# The trail, destination first. Its names are reserved, so no other room takes them.
+TRAIL=$(echo "$TRAIL_IN" | awk '{for (j=NF; j>=1; j--) printf "%s ", $j}')
+USED=" $TRAIL "  # every room gets a name no other room has, so maps are readable
 pick_name() {
   local tries=0
   set -- $NAMES
@@ -117,16 +127,46 @@ grow "" 0
 # depth of a relative path = number of path components
 depth_of() { [ -z "$1" ] && { echo 0; return; }; echo "$1" | awk -F/ '{print NF}'; }
 
-# --- 4. Choose the destination: a dead-end room at least 2 steps deep -------
-CANDIDATES=""
-for r in $ROOMS; do
-  d=$(depth_of "$r")
-  has_kids=$(find "$WORLD/$r" -mindepth 1 -maxdepth 1 -type d | head -1)
-  if [ "$d" -ge 2 ] && [ -z "$has_kids" ]; then CANDIDATES="$CANDIDATES $r"; fi
-done
+# --- 4. Choose the destination: a dead-end room, 3 steps deep if possible ----------
+dead_ends() {       # dead_ends <minimum depth>  ->  every dead-end room at least that deep
+  local r d has_kids out=""
+  for r in $ROOMS; do
+    d=$(depth_of "$r")
+    has_kids=$(find "$WORLD/$r" -mindepth 1 -maxdepth 1 -type d | head -1)
+    if [ "$d" -ge "$1" ] && [ -z "$has_kids" ]; then out="$out $r"; fi
+  done
+  echo "$out"
+}
+CANDIDATES=$(dead_ends 3)
+[ -z "$CANDIDATES" ] && CANDIDATES=$(dead_ends 2)
 set -- $CANDIDATES
 if [ $# -eq 0 ]; then echo "World too small — try a bigger --depth."; exit 1; fi
 roll $#; eval "DEST=\${$(( R + 1 ))}"
+
+# --- 4b. Lay the haiku's trail --------------------------------------------------
+# Rename the destination and the rooms just above it, so the player who remembers
+# the haiku can follow, e.g.  dream -> hopes -> egress. (A small world gets a shorter trail.)
+IFS=/ read -r -a PARTS <<< "$DEST"
+N=${#PARTS[@]}
+head_path() {       # head_path <m>  ->  the first m folders of DEST, joined with /
+  local out="" j=0
+  while [ "$j" -lt "$1" ]; do out="${out:+$out/}${PARTS[$j]}"; j=$(( j + 1 )); done
+  echo "$out"
+}
+set -- $TRAIL
+K=$#; [ "$N" -lt "$K" ] && K=$N         # a small world gets a shorter trail
+i=$N
+for word in "$@"; do                    # work upwards from the destination
+  [ "$i" -le $(( N - K )) ] && break
+  above=$(head_path $(( i - 1 )))
+  mv "$WORLD/$(head_path "$i")" "$WORLD/${above:+$above/}$word"
+  i=$(( i - 1 ))
+done
+DEST=$(head_path $(( N - K )))
+for word in $(echo "$TRAIL" | awk -v k="$K" '{for (j=k; j>=1; j--) printf "%s ", $j}'); do
+  DEST="${DEST:+$DEST/}$word"
+done
+ROOMS=$(cd "$WORLD" && find . -mindepth 1 -type d | sed 's|^\./||' | sort)   # names changed, so list them again
 
 # --- 5. Write a clue in every room ---------------------------------------------
 # Distance in a tree = steps up to the shared ancestor + steps down from it.
