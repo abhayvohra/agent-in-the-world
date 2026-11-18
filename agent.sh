@@ -297,7 +297,7 @@ pause()    { [ "$AGENT_DELAY" != "0" ] && sleep "$AGENT_DELAY"; }
 
 # ---- THE BODY ---------------------------------------------------------------
 
-# SEE: read a clue in THIS room. Sets CLUE (empty if the agent senses nothing).
+# SENSE: read a clue in THIS room. Sets CLUE (empty if the agent senses nothing).
 sense_clue() {
   local f; CLUE=""
   for f in $AGENT_SENSES; do
@@ -305,7 +305,7 @@ sense_clue() {
   done
 }
 
-# SEE: list the doors (rooms inside this one). Sets DOORS and CAN_GO_UP.
+# SENSE: list the doors (rooms inside this one). Sets DOORS and CAN_GO_UP.
 sense_doors() {
   local d; DOORS=""
   for d in */; do [ -d "$d" ] && DOORS="$DOORS ${d%/}"; done
@@ -313,7 +313,7 @@ sense_doors() {
   if [ "$PWD" = "$ROOT" ]; then CAN_GO_UP="no"; else CAN_GO_UP="yes"; fi
 }
 
-# DO: move one step. Fails if the rules or the operating system say no.
+# ACT: move one step. Fails if the rules or the operating system say no.
 move() {
   if [ "$1" = ".." ]; then [ "$PWD" = "$ROOT" ] && return 1; cd ..
   else case "$1" in */*|"") return 1 ;; esac; cd -- "$1" 2>/dev/null; fi
@@ -349,7 +349,7 @@ brain_auto() {                   # follows the clues
   else ACTION=""; THOUGHT="Every door tried and I can't go further out. I am stuck."; fi
 }
 
-# ---- THE LOOP: see → check → think → do → remember ---------------------------
+# ---- THE LOOP: sense → check → think → act → remember -------------------------
 run_agent() {
   local BRAIN="$1" STEPS=0 BLOCKED=0
   LAST_CLUE=""; LAST_ACTION=""
@@ -361,8 +361,8 @@ run_agent() {
 
   while :; do
     echo
-    sense_clue; sense_doors                                                   # SEE
-    say "$C" SEE "in $(here)  ·  clue: ${CLUE:-?}  ·  doors: ${DOORS:-none}$( [ "$CAN_GO_UP" = yes ] && echo '  ·  can go back out' )"
+    sense_clue; sense_doors                                                   # SENSE
+    say "$C" SENSE "in $(here)  ·  clue: ${CLUE:-?}  ·  doors: ${DOORS:-none}$( [ "$CAN_GO_UP" = yes ] && echo '  ·  can go back out' )"
     remember "saw $(here) clue=${CLUE:-?} doors=${DOORS:-none}"
 
     if [ "$CLUE" = "0" ]; then                                                # CHECK
@@ -384,12 +384,12 @@ run_agent() {
     fi
     pause
 
-    if move "$ACTION"; then                                                   # DO
-      say "$B" DO "cd $ACTION"
+    if move "$ACTION"; then                                                   # ACT
+      say "$B" ACT "cd $ACTION"
       STEPS=$(( STEPS + 1 )); LAST_CLUE="$CLUE"; LAST_ACTION="$ACTION"
       remember "did cd $ACTION"                                               # REMEMBER
     else
-      say "$RD" DO "cd $ACTION  →  refused (Permission denied)"
+      say "$RD" ACT "cd $ACTION  →  refused (Permission denied)"
       remember "blocked cd $ACTION from $(here)"; BLOCKED=$(( BLOCKED + 1 ))
     fi
     pause

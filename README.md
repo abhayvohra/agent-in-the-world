@@ -86,7 +86,7 @@ These files are material for the post-session exercise, so they are kept until y
 
 ## Read the code
 
-The two scripts are meant to be read. `cat agent.sh` shows the agent: its body (how it senses and moves), its two brains (auto and random), and its loop of **see → check → think → do → remember**. `cat world-builder.sh` shows how its world was made.
+The two scripts are meant to be read. `cat agent.sh` shows the agent: its body (how it senses and moves), its two brains (auto and random), and its loop of **sense → check → think → act → remember**. `cat world-builder.sh` shows how its world was made.
 
 ## License
 
